@@ -8,8 +8,14 @@ import todoRouter from './routes/todo.route.js';
 import userRouter from './routes/user.route.js';
 
 const app = express();
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:5175",
+  "http://localhost:5176",
+  "https://mern-daily-todo.netlify.app",
+];
 
-const allowedOrigins = ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176"];
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -63,6 +69,12 @@ app.get("/test", (req, res) => {
 
 app.use("/todo", todoRouter);
 app.use("/user", userRouter);
+
+// Global error middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: err.message || "Something went wrong" });
+});
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
