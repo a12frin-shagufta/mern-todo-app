@@ -1,7 +1,7 @@
 import React from "react";
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import Signup from "../pages/Signup";
-import Login from "../pages/login";
+import Login from "../pages/Login.jsx";
 import Todo from "../pages/Todo";
 
 // ✅ Protected Route Component
