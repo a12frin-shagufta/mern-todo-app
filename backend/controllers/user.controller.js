@@ -16,23 +16,32 @@ export const register = async (req, res) => {
     if (!email || !username || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
+
     const validation = userSchema.safeParse({ email, username, password });
     if (!validation.success) {
       const errorMessage = validation.error.issues.map((err) => err.message);
       return res.status(400).json({ errors: errorMessage });
     }
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
     }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new User({ email, username, password: hashedPassword });
     await newUser.save();
+
     const confirmToken = await generateTokenAndSaveInCookies(newUser._id, res);
+
+    // Sanitize user object (remove password)
+    const userResponse = newUser.toObject();
+    delete userResponse.password;
+
     res.status(201).json({
       message: "User registered successfully",
-      user: newUser,
-      token: confirmToken
+      user: userResponse,
+      token: confirmToken,
     });
   } catch (error) {
     console.error("Registration error:", error);
@@ -46,16 +55,24 @@ export const login = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password are required" });
     }
+    console.log("Login attempt for email:", email);
     const user = await User.findOne({ email }).select("+password");
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    if (!user) {
+      console.log("User not found for email:", email);
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+    console.log("User found:", user);
+    const isPasswordMatch = await bcrypt.compare(password, user.password);
+    console.log("Password match:", isPasswordMatch);
+    if (!isPasswordMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
     const confirmToken = await generateTokenAndSaveInCookies(user._id, res);
     user.password = undefined;
-    res.status(200).json({ 
-      message: "Login successful", 
+    res.status(200).json({
+      message: "Login successful",
       user,
-      token: confirmToken 
+      token: confirmToken,
     });
   } catch (error) {
     console.error("Error logging in user:", error);
@@ -64,9 +81,11 @@ export const login = async (req, res) => {
 };
 
 export const logout = (req, res) => {
-  res.clearCookie("authToken", { path: "/" });
+  res.clearCookie("authToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+    path: "/",
+  });
   res.status(200).json({ message: "Logout successful" });
 };
-
-
-
