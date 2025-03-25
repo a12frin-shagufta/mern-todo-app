@@ -32,24 +32,38 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    try {
-      console.log("API URL being used:", getApiUrl());
-      console.log("Login request body:", formData);
-      const response = await api.post("/user/login", formData);
-      console.log("Login successful:", response.data);
-      navigate("/todo");
-    } catch (error) {
-      console.error("Login Error:", error);
-      if (error.response) {
-        console.error("Response status:", error.response.status);
-        console.error("Response data:", error.response.data);
-        setError(error.response.data.message || "Login failed. Please try again.");
-      } else if (error.request) {
-        console.error("No response received:", error.request);
-        setError("No response from server. Please try again later.");
-      } else {
-        console.error("Error setting up request:", error.message);
-        setError("An error occurred: " + error.message);
+    let retries = 3; // Number of retries
+    let delay = 2000; // 2 seconds delay between retries
+
+    while (retries > 0) {
+      try {
+        console.log("API URL being used:", getApiUrl());
+        console.log("Login request body:", formData);
+        const response = await api.post("/user/login", formData);
+        console.log("Login successful:", response.data);
+        navigate("/todo"); // Redirect to todo page
+        return; // Exit the loop on success
+      } catch (error) {
+        console.error("Login Error:", error);
+        if (error.response) {
+          console.error("Response status:", error.response.status);
+          console.error("Response data:", error.response.data);
+          setError(error.response.data.message || "Login failed. Please try again.");
+          break; // If backend responds with an error, stop retrying
+        } else if (error.request) {
+          console.error("No response received:", error.request);
+          retries--;
+          if (retries === 0) {
+            setError("No response from server after multiple attempts. Please try again later.");
+          } else {
+            setError(`No response from server. Retrying... (${retries} attempts left)`);
+            await new Promise((resolve) => setTimeout(resolve, delay));
+          }
+        } else {
+          console.error("Error setting up request:", error.message);
+          setError("An error occurred: " + error.message);
+          break;
+        }
       }
     }
   };
