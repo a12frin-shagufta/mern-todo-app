@@ -9,9 +9,9 @@ import userRouter from './routes/user.route.js';
 
 const app = express();
 
-// Simplified CORS setup for debugging
+// CORS setup for local and deployed frontend
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: ["http://localhost:5173", "https://mern-daily-todo.netlify.app"],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
@@ -51,5 +51,5 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`Server is running on port ${port} in ${process.env.NODE_ENV} mode`);
 });
