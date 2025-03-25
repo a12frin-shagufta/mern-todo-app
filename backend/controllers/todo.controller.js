@@ -44,14 +44,16 @@ export const createTodo = async (req, res) => {
   }
 };
 
+
+
 export const getTodo = async (req, res) => {
   try {
-    console.log("Fetching todos for user:", req.userId);
-    const todos = await Todo.find({ userId: req.userId }); // 'userId' matches schema
-    res.status(200).json({ message: "Todos fetched successfully", todos });
+    const todos = await Todo.find({ userId: req.userId });
+    console.log("Todos fetched for user:", req.userId, todos); // Debug log
+    res.status(200).json(todos || []); // Ensure array response
   } catch (error) {
     console.error("Error fetching todos:", error);
-    res.status(400).json({ message: "Error fetching todos", error: error.message });
+    res.status(500).json({ message: "Failed to fetch todos" });
   }
 };
 
@@ -84,5 +86,24 @@ export const deleteTodo = async (req, res) => {
   } catch (error) {
     console.error("Error deleting todo:", error);
     res.status(400).json({ message: "Error deleting todo", error: error.message });
+  }
+};
+
+export const markTodoAsCompleted = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log("Marking todo as completed - ID:", id, "User ID:", req.userId);
+    const todo = await Todo.findOne({ _id: id, userId: req.userId });
+    if (!todo) {
+      console.log("Todo not found for ID:", id);
+      return res.status(404).json({ message: "Todo not found" });
+    }
+    todo.completed = !todo.completed;
+    await todo.save();
+    console.log("Updated todo:", todo);
+    res.status(200).json({ message: "Todo updated successfully", todo });
+  } catch (error) {
+    console.error("Error marking todo as completed:", error);
+    res.status(500).json({ message: "Failed to mark todo as completed" });
   }
 };

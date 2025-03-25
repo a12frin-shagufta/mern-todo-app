@@ -8,32 +8,13 @@ import todoRouter from './routes/todo.route.js';
 import userRouter from './routes/user.route.js';
 
 const app = express();
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:5174",
-  "http://localhost:5175",
-  "http://localhost:5176",
-  "https://mern-daily-todo.netlify.app",
-];
 
+// Simplified CORS setup for debugging
 app.use(cors({
-  origin: "https://mern-daily-todo.netlify.app",
+  origin: "http://localhost:5173",
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
-
-app.options("*", cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
 app.use(express.json());
@@ -64,7 +45,6 @@ app.get("/test", (req, res) => {
 app.use("/todo", todoRouter);
 app.use("/user", userRouter);
 
-// Global error middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ message: err.message || "Something went wrong" });
