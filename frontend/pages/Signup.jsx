@@ -2,8 +2,15 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
+const getApiUrl = () => {
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    return "http://localhost:5000";
+  }
+  return "https://mern-todo-app-kxne.onrender.com";
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000",
+  baseURL: getApiUrl(),
   withCredentials: true,
 });
 
@@ -24,7 +31,7 @@ const Signup = () => {
     e.preventDefault();
     setError("");
     try {
-      console.log("API URL being used:", import.meta.env.VITE_API_URL);
+      console.log("API URL being used:", getApiUrl());
       const response = await api.post("/user/signup", formData);
       console.log("Signup successful:", response.data);
       navigate("/todo");
