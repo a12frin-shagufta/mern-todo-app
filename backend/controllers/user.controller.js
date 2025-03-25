@@ -50,33 +50,27 @@ export const register = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-  const { email, password } = req.body;
   try {
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
-    }
-    console.log("Login attempt for email:", email);
-    const user = await User.findOne({ email }).select("+password");
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
     if (!user) {
-      console.log("User not found for email:", email);
       return res.status(400).json({ message: "Invalid credentials" });
     }
-    console.log("User found:", user);
-    const isPasswordMatch = await bcrypt.compare(password, user.password);
-    console.log("Password match:", isPasswordMatch);
-    if (!isPasswordMatch) {
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
-    const confirmToken = await generateTokenAndSaveInCookies(user._id, res);
-    user.password = undefined;
-    res.status(200).json({
-      message: "Login successful",
-      user,
-      token: confirmToken,
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "10d" });
+    res.cookie("authToken", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production", // Secure cookie in production
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Cross-site cookies for production
+      maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
     });
+    res.status(200).json({ message: "Login successful", token, user });
   } catch (error) {
-    console.error("Error logging in user:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    console.error("Error logging in:", error);
+    res.status(500).json({ message: "Failed to login" });
   }
 };
 
