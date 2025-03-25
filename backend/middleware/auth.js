@@ -2,13 +2,12 @@ import jwt from "jsonwebtoken";
 
 export const verifyToken = async (req, res, next) => {
   try {
-    const token = req.cookies.authToken;
-    console.log("Token received in middleware:", token); // Debug log
+    let token = req.cookies.authToken;
     if (!token) {
       return res.status(401).json({ message: "Unauthorized: No token provided" });
     }
+    token = token.replace(/^.*?(eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+).*$/, '$1');
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("Decoded token:", decoded); // Debug log
     req.userId = decoded.userId;
     next();
   } catch (error) {

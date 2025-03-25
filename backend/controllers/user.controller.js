@@ -1,7 +1,7 @@
 import User from "../model/user.model.js";
 import { z } from "zod";
 import bcrypt from "bcrypt";
-import { generateTokenAndSaveInCookies } from "../json/token.js";
+import jwt from "jsonwebtoken"; // Added jwt import
 
 const userSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -32,16 +32,21 @@ export const register = async (req, res) => {
     const newUser = new User({ email, username, password: hashedPassword });
     await newUser.save();
 
-    const confirmToken = await generateTokenAndSaveInCookies(newUser._id, res);
+    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: "10d" });
+    res.cookie("authToken", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 10 * 24 * 60 * 60 * 1000,
+    });
 
-    // Sanitize user object (remove password)
     const userResponse = newUser.toObject();
     delete userResponse.password;
 
     res.status(201).json({
       message: "User registered successfully",
       user: userResponse,
-      token: confirmToken,
+      token,
     });
   } catch (error) {
     console.error("Registration error:", error);
@@ -52,7 +57,7 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select("+password");
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
@@ -63,11 +68,13 @@ export const login = async (req, res) => {
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "10d" });
     res.cookie("authToken", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // Secure cookie in production
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Cross-site cookies for production
-      maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 10 * 24 * 60 * 60 * 1000,
     });
-    res.status(200).json({ message: "Login successful", token, user });
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    res.status(200).json({ message: "Login successful", token, user: userResponse });
   } catch (error) {
     console.error("Error logging in:", error);
     res.status(500).json({ message: "Failed to login" });
@@ -78,7 +85,7 @@ export const logout = (req, res) => {
   res.clearCookie("authToken", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     path: "/",
   });
   res.status(200).json({ message: "Logout successful" });
@@ -93,7 +100,9 @@ export const checkAuth = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    res.status(200).json({ message: "Authenticated", user });
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    res.status(200).json({ message: "Authenticated", user: userResponse });
   } catch (error) {
     console.error("Error verifying user:", error);
     res.status(500).json({ message: "Failed to verify user" });

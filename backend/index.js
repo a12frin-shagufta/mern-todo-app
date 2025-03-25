@@ -1,55 +1,32 @@
-import express from 'express';
-import dotenv from 'dotenv';
-dotenv.config();
-import mongoose from 'mongoose';
-import cors from 'cors';
-import cookieParser from 'cookie-parser';
-import todoRouter from './routes/todo.route.js';
-import userRouter from './routes/user.route.js';
+import express from "express";
+import mongoose from "mongoose";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import userRouter from "./routes/user.route.js";
+import todoRouter from "./routes/todo.route.js";
 
 const app = express();
 
-// CORS setup for local and deployed frontend
-app.use(cors({
-  origin: ["http://localhost:5173", "https://mern-daily-todo.netlify.app"],
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-}));
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "https://mern-daily-todo.netlify.app"],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 app.use(express.json());
 app.use(cookieParser());
 
-const port = process.env.PORT || 5000;
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.error("MongoDB connection error:", err));
 
-const connectDb = async () => {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log("Connected to MongoDB");
-  } catch (error) {
-    console.error("MongoDB connection error:", error);
-  }
-};
-connectDb();
-
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url} received from ${req.headers.origin}`);
-  console.log("Cookies:", req.cookies);
-  next();
-});
-
-app.get("/test", (req, res) => {
-  res.json({ message: "Backend test successful" });
-});
-
-app.use("/todo", todoRouter);
 app.use("/user", userRouter);
+app.use("/todo", todoRouter);
 
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: err.message || "Something went wrong" });
-});
-
-app.listen(port, () => {
-  console.log(`Server is running on port ${port} in ${process.env.NODE_ENV} mode`);
+app.listen(5000, () => {
+  console.log("Server running on port 5000");
 });
